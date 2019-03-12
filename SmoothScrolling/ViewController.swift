@@ -17,6 +17,7 @@ import UIKit
 class ViewController: UIViewController {
     var apiRequest: ApiRequest?
     var dataSource: [[String : Any]] = [[String : Any]]() //moved to imagecell
+    var isFetchInProgress: Bool = false
     
     fileprivate lazy var mainView: MainView = {
        let view = MainView(frame: .zero)
@@ -48,26 +49,31 @@ class ViewController: UIViewController {
         mainView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
         mainView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
         mainView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
-        makeRequest()
+        makeRequest(pageNumber: 0, reload: true)
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
     }
 
-    func makeRequest(pageNumber: Int = 0) {
+    func makeRequest(pageNumber: Int = 0, reload: Bool = false) {
         guard let api = apiRequest else {
             return
         }
         
-        api.fetchList(page: pageNumber) { (response) in
-            
-            for item in response {
-                let dict: [String : Any] = item as! [String : Any]
-                self.dataSource.append(dict)
+        if isFetchInProgress == true {
+            //
+        } else {
+            isFetchInProgress = true
+            api.fetchList(page: pageNumber) { (response) in
+                for item in response {
+                    let dict: [String : Any] = item as! [String : Any]
+                    self.dataSource.append(dict)
+                }
+                
+                self.isFetchInProgress = false
+                self.mainView.insertDataTo(source: self.dataSource, pageNumber: pageNumber) //performs a tableview reload within this function
             }
-            self.mainView.insertDataTo(source: self.dataSource) //performs a tableview reload within this function
         }
     }
 }

@@ -15,17 +15,17 @@ enum ImageQuality: String {
 
 class ImageCell: UITableViewCell {
     var delegate: MainView?
-    var imageCache = NSCache<NSString, UIImage>()
-    var sizeCache: [String : CGSize] = [:]
+    private var imageCache = NSCache<NSString, UIImage>()
+    private var sizeCache: [String : CGSize] = [:]
     
-    var imgView: UIImageView = {
+    private var imgView: UIImageView = {
         let view = UIImageView()
         view.clipsToBounds = true
         view.contentMode = .scaleAspectFill
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
-    var activityIndicator: UIActivityIndicatorView = {
+    private var activityIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView()
         indicator.translatesAutoresizingMaskIntoConstraints = false
         indicator.style = .gray
@@ -34,8 +34,8 @@ class ImageCell: UITableViewCell {
         return indicator
     }()
     
-    var heightConstraint: NSLayoutConstraint!
-    var size: CGSize = CGSize()
+    private var heightConstraint: NSLayoutConstraint!
+    private var size: CGSize = CGSize()
     
     var data = [String: Any]() {
         didSet {
@@ -67,7 +67,16 @@ class ImageCell: UITableViewCell {
         heightAnchor.constraint(equalTo: imgView.widthAnchor, multiplier: 1.5).isActive = true
     }
     
-    fileprivate func fetchImageFromUrl() {
+    func configure(withData data: [String : Any]?) {
+        guard let d = data else {
+            return
+        }
+        
+        self.data = d
+        fetchImageFromUrl()
+    }
+    
+    private func fetchImageFromUrl() {
         let urlQualityDict = data["urls"] as! [String : Any]
         let imageQualityUrl = urlQualityDict[ImageQuality.regular.rawValue] as! String
         // make request

@@ -9,6 +9,7 @@
 import Foundation
 import UIKit
 
+/// Network layer to encapsulate the fetch requests for a list of photos and the direct url image.
 class ApiRequest: NSObject {
     let baseURI = "https://api.unsplash.com"
     let session = URLSession.shared
@@ -40,6 +41,12 @@ class ApiRequest: NSObject {
                 return
             }
 
+            guard let res = response as? HTTPURLResponse else {
+                return
+            }
+            
+            
+            
             do {
                 let json = try JSONSerialization.jsonObject(with: dataStr, options: []) as! [Any]
                 completionHandler(json)

@@ -8,6 +8,7 @@
 
 import UIKit
 
+/// An attempt to separate the view from the view controller itself. I've placed all view's within the Main View beginning with the UITableView.
 class MainView: UIView {
     let cellId = "imageCellId"
     var dataSource = [[String : Any]]()
@@ -38,6 +39,8 @@ class MainView: UIView {
     func setupView() {
         addSubview(tableView)
         tableView.register(ImageCell.self, forCellReuseIdentifier: cellId)
+        tableView.isHidden = true
+        tableView.prefetchDataSource = self
         tableView.estimatedRowHeight = 400.0
         tableView.rowHeight = UITableView.automaticDimension
     }
@@ -49,12 +52,19 @@ class MainView: UIView {
         tableView.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
     }
     
-    func insertDataTo(source: [[String : Any]]) {
+    func insertDataTo(source: [[String : Any]], pageNumber: Int) {
+        self.dataSource = source
         DispatchQueue.main.async {
-            self.dataSource = source
-            self.tableView.reloadData()
+            if (pageNumber < 1) {
+                self.tableView.isHidden = false
+                self.tableView.reloadData()
+            } else {
+                let startIndex = (pageNumber - 1) * 10
+                let endIndex = self.dataSource.count - 1
+                let arr = (startIndex...endIndex).map { IndexPath(row: $0, section: 0) }
+                self.tableView.insertRows(at: arr, with: .none)
+            }
         }
-        
     }
     
     func addToSizeCache(url: String, size: CGSize) {
@@ -62,26 +72,59 @@ class MainView: UIView {
     }
 }
 
-extension MainView: UITableViewDelegate, UITableViewDataSource {
-    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        if (indexPath.row == dataSource.count - 1) {
+/// The main work of the UITableView and it's functions
+extension MainView: UITableViewDelegate, UITableViewDataSource, UITableViewDataSourcePrefetching {
+    func tableView(_ tableView: UITableView, prefetchRowsAt indexPaths: [IndexPath]) {
+        print("\(indexPaths) \(self.dataSource.count)")
+        
+        //intersect with visible cells
+        let fetchMore = indexPaths.contains { (indexPath) -> Bool in
+            return indexPath.row >= self.dataSource.count - 1
+        }
+        
+        if fetchMore {
+            print("fetch")
             let pageNumber = (dataSource.count / 10) + 1
             delegate?.makeRequest(pageNumber: pageNumber)
         }
     }
     
+    
+//    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+//        if (indexPath.row == dataSource.count - 1) {
+//            let pageNumber = (dataSource.count / 10) + 1
+//            delegate?.makeRequest(pageNumber: pageNumber)
+//        }
+//    }
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        print("numberOfRowsInSection \(dataSource.count)")
         return dataSource.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath) as! ImageCell
-        cell.data = dataSource[indexPath.row]
+        
+        if (indexPath.row > dataSource.count) {
+            cell.configure(withData: nil)
+        } else {
+            cell.configure(withData: dataSource[indexPath.row])
+        }
+        
         cell.delegate = self
         return cell
     }
 
     func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
         return 400.0
+    }
+}
+
+private extension MainView {
+    
+    func visibleIndexPathsToReload(intersecting indexPaths: [IndexPath]) -> [IndexPath] {
+        let indexPathsForVisibleRows = tableView.indexPathsForVisibleRows ?? []
+        let indexPathsIntersection = Set(indexPathsForVisibleRows).intersection(indexPaths)
+        return Array(indexPathsIntersection)
     }
 }
